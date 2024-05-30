@@ -7,13 +7,22 @@
 - Neovim HEAD or nightly
     - other version not tested
 - WezTerm
-- If Windows: [QL-Win/QuickLook](https://github.com/QL-Win/QuickLook) portable version
-- If Linux: [GNOME/sushi](https://gitlab.gnome.org/GNOME/sushi)
-- If WSL:
-    - Write `alias winwezterm="/path/to/windows/path/to/wezterm.exe"` in your shell config file.
-    - EXISTS `/mnt/c/Program Files/PowerShell/7'/pwsh.exe`.
-    - WSL INSTALLED in **SSD**.
-        - In the case of HDD, it takes a long time.
+
+### Windows
+
+- [QL-Win/QuickLook](https://github.com/QL-Win/QuickLook) portable version
+
+### Linux
+
+- [GNOME/sushi](https://gitlab.gnome.org/GNOME/sushi)
+
+### WSL
+
+- SHOULD BE INSTALL IN **SSD**.
+    - In the case of HDD, it takes a long time.
+- Run script:
+    - `sudo ln -s "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ~/.local/bin/winpwsh`
+    - `sudo ln -s "/mnt/c/Program Files/WezTerm/wezterm.exe" ~/.local/bin/winwezterm`
 
 ## Features
 
@@ -54,7 +63,8 @@ It probably works.
 | `openWithQuickLook`   |    ⭕    |
 | `weztermPreview`      |    ⭕    |
 
-It probably works but I haven't tested it.
+It probably works.
+but I haven't mac, can't tested it.
 
 ## Install and Setup
 
