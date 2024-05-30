@@ -1,2 +1,6 @@
 .repro
 *.zip
+node_modules
+.textlintcache
+*.patch
+*.patch.gpg
