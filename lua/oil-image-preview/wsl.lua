@@ -15,13 +15,21 @@ M.openWithQuickLook = {
 -- NOTE: unused?
 --local OIL_PREVIEW_ENTRY_ID_VAR_NAME = "OIL_PREVIEW_ENTRY_ID"
 
---TODO: under
---[[
--- NOTE: ONLY macos, linux
+-- NOTE: ONLY wsl
 ---Get the pain id in which neovim is open
 ---@return number|nil
 local function getNeovimWeztermPane()
-    local wezterm_pane_id = vim.env.WEZTERM_PANE
+    ---'/mnt/c/Program Files/PowerShell/7/pwsh.exe' -c 'Write-Output $env:WEZTERM_PANE'
+    ---@type table
+    local cmd = {
+        "winpwsh",
+        "-c",
+        "Write-Output $env:WEZTERM_PANE",
+    }
+
+    local obj = vim.system(cmd, { text = true }):wait()
+    local wezterm_pane_id = obj.stdout
+
     if not wezterm_pane_id then
         vim.notify("Wezterm pane not found", vim.log.levels.ERROR)
         return
@@ -29,14 +37,22 @@ local function getNeovimWeztermPane()
     return tonumber(wezterm_pane_id)
 end
 
--- NOTE: ONLY macos, linux
+-- NOTE: ONLY wsl
 ---Activate a wezterm pane using wezterm_pane_id
 ---@param wezterm_pane_id number
 local activeWeztermPane = function(wezterm_pane_id)
-    vim.system({ "wezterm", "cli", "activate-pane", "--pane-id", wezterm_pane_id })
+    ---@type table
+    local cmd = {
+        "winwezterm",
+        "cli",
+        "activate-pane",
+        "--pane-id",
+        wezterm_pane_id,
+    }
+    vim.system(cmd)
 end
 
--- NOTE: ONLY macos, linux
+-- NOTE: ONLY wsl
 ---Open a new wezterm pane, and get its pane id
 ---@param opt table
 local openNewWeztermPane = function(opt)
@@ -44,14 +60,15 @@ local openNewWeztermPane = function(opt)
     local percent = _opt.percent or 30
     local direction = _opt.direction or "right"
 
+    ---@type table
     local cmd = {
-        "wezterm",
+        "winwezterm",
         "cli",
         "split-pane",
         ("--percent=%d"):format(percent),
         ("--%s"):format(direction),
         "--",
-        "bash",
+        "pwsh",
     }
     local obj = vim.system(cmd, { text = true }):wait()
     local wezterm_pane_id = assert(tonumber(obj.stdout))
@@ -59,20 +76,35 @@ local openNewWeztermPane = function(opt)
     return wezterm_pane_id
 end
 
--- NOTE: ONLY macos, linux
+-- NOTE: ONLY wsl
 ---Close the wezterm pane for wezterm_pane_id
 ---@param wezterm_pane_id number
 local closeWeztermPane = function(wezterm_pane_id)
-    vim.system({
-        "wezterm",
+    ---@type table
+    local cmd = {
+        "winwezterm",
         "cli",
         "kill-pane",
         ("--pane-id=%d"):format(wezterm_pane_id),
-    })
+    }
+    vim.system(cmd)
 end
 
--- NOTE: ONLY macos, linux
----Sendi command to the wezterm pane
+-- XXX: test
+M.weztermPreview = {
+    callback = function()
+        local before = getNeovimWeztermPane()
+        local opened = openNewWeztermPane()
+        activeWeztermPane(before)
+        closeWeztermPane(opened)
+        vim.notify("Opened Pane id: " .. opened, vim.log.levels.ERROR)
+    end,
+    desc = "test",
+}
+
+-- TODO: need test
+-- NOTE: ONLY wsl
+---Send command to the wezterm pane
 ---@param wezterm_pane_id number
 -- TODO: fix type
 ---@param command any
@@ -81,7 +113,7 @@ local sendCommandToWeztermPane = function(wezterm_pane_id, command)
         "echo",
         ("'%s'"):format(command),
         "|",
-        "wezterm",
+        "winwezterm",
         "cli",
         "send-text",
         "--no-paste",
@@ -90,13 +122,14 @@ local sendCommandToWeztermPane = function(wezterm_pane_id, command)
     vim.fn.system(table.concat(cmd, " "))
 end
 
--- NOTE: ONLY macos, linux
+-- TODO: need test
+-- NOTE: ONLY wsl
 ---Get a list of wezterm panes
 -- TODO: fix type
 ---@return any
 local function listWeztermPanes()
     local cli_result = vim.system({
-        "wezterm",
+        "winwezterm",
         "cli",
         "list",
         ("--format=%s"):format("json"),
@@ -107,7 +140,8 @@ local function listWeztermPanes()
     return panes
 end
 
--- NOTE: ONLY macos, linux
+-- TODO: need test
+-- NOTE: ONLY windows, wsl
 ---Get the wezterm pane id where the image preview is displayed
 ---@return number|nil
 local function getPreviewWeztermPaneId()
@@ -124,7 +158,8 @@ local function getPreviewWeztermPaneId()
     return preview_pane ~= nil and preview_pane.pane_id or nil
 end
 
--- NOTE: ONLY macos, linux
+-- TODO: need test
+-- NOTE: ONLY windows, wsl
 ---Open the image preview pane and, get the wezterm pane id
 ---@return number|nil
 local function openWeztermPreviewPane()
@@ -135,14 +170,16 @@ local function openWeztermPreviewPane()
     return preview_pane_id
 end
 
--- NOTE: ONLY macos, linux
+-- TODO: need test
+-- NOTE: ONLY windows, wsl
 ---Check if opened wezterm image preview pane
 ---@return boolean
 local is_wezterm_preview_open = function()
     return getPreviewWeztermPaneId() ~= nil
 end
 
--- NOTE: ONLY macos, linux
+--[[ TODO:
+-- NOTE: ONLY windows, wsl
 M.weztermPreview = {
     callback = function()
         if is_wezterm_preview_open() then
@@ -228,4 +265,5 @@ M.weztermPreview = {
     desc = "Preview with Wezterm",
 }
 ]]
+
 return M
