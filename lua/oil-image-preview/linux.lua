@@ -8,7 +8,7 @@ local debounce = util.debounce
 ---Open path with linux GNOME/sushi
 ---@param path string
 local function open_file_with_quicklook(path)
-    vim.cmd(("silent !sushi %s &"):format(path))
+    vim.cmd(("silent !xdg-open %s &"):format(path))
 end
 
 -- NOTE: ONLY linux
