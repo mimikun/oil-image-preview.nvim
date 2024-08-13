@@ -109,8 +109,7 @@ local function listWeztermPanes()
         ("--format=%s"):format("json"),
     }, { text = true }):wait()
     local json = vim.json.decode(cli_result.stdout)
-    local panes = vim.iter(json):map(_l("obj: { pane_id = obj.pane_id, tab_id = obj.tab_id }"))
-
+    local panes = vim.iter(json):map(function(obj) return { pane_id = obj.pane_id, tab_id = obj.tab_id } end)
     return panes
 end
 
