@@ -1,5 +1,4 @@
 local M = {}
-
 ---OS name
 ---@type string
 local os_name = vim.uv.os_uname().sysname
@@ -51,15 +50,87 @@ M.debounce = function(func, wait)
     end
 end
 
+--Check if audio file
+M.isAudio = function(url)
+    local extension = url:match("^.+(%..+)$")
+    local audioExt = { ".mp3", ".wav", ".ogg", ".flac", ".m4a" }
+    return vim.iter(audioExt):any(function(ext)
+        return extension == ext
+    end)
+end
+
+-- Function that checks if a file is compatible with bat using the 'file' command
+M.isBatCompatible = function(path)
+    local handle = io.popen(("file --mime-type -b %s"):format(vim.fn.shellescape(path)))
+    local mime_type = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+
+    -- Check if MIME type starts with "text/"
+    if mime_type:match("^text/") then
+        return true
+    end
+
+    -- Other MIME types that are supported by bat
+    local additional_types = {
+        ["application/json"] = true,
+        ["application/xml"] = true,
+        ["application/javascript"] = true,
+        -- Add other specific MIME types here
+    }
+
+    return additional_types[mime_type] or false
+end
+
 ---Check if image file
 ---@param url string
 M.isImage = function(url)
-    local extension = url:match("^.+(%..+)$")
-    local imageExt = { ".bmp", ".jpg", ".jpeg", ".png", ".gif" }
+    local handle = io.popen(("file --mime-type -b %s"):format(vim.fn.shellescape(url)))
+    local mime_type = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+    if mime_type:match("^image/") then
+        return true
+    end
+    return false
+end
 
-    return vim.iter(imageExt):any(function(ext)
-        return extension == ext
-    end)
+---Function that checks if a file is compatible with mpv using the 'file' command
+---@param url string
+---@return boolean
+M.isMPVCompatible = function(url)
+    local handle = io.popen(("file --mime-type -b %s"):format(vim.fn.shellescape(url)))
+    local mime_type = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+    -- Check if MIME type starts with "video/"
+    if mime_type:match("^video/") then
+        return true
+    end
+    -- Other MIME types that are supported by mpv
+    local additional_types = {
+        ["application/mp4"] = true,
+        ["application/ogg"] = true,
+        ["application/x-matroska"] = true,
+        ["inode/x-empty"] = true,
+        -- Add other specific MIME types here
+    }
+    return additional_types[mime_type] or false
+end
+
+--- Function that checks if a file is compatibly with convert (ImageMagick) for using `convert 'file' 'pw.png'`
+--- @param url string
+--- @return boolean
+M.isImageMagickCompatible = function(url)
+    local handle = io.popen(("file --mime-type -b %s"):format(vim.fn.shellescape(url)))
+    local mime_type = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+    -- Other MIME types that are supported by convert
+    local additional_types = {
+        ["application/pdf"] = true,
+        ["image/vnd.djvu"] = true,
+        ["application/postscript"] = true,
+        ["application/eps"] = true,
+        -- Add other specific MIME types here
+    }
+    return additional_types[mime_type] or false
 end
 
 ---Get entry absolute path
@@ -71,7 +142,7 @@ M.getEntryAbsolutePath = function()
     if not entry or not dir then
         return
     end
-    return dir .. entry.name, entry, dir
+    return dir .. entry.name, string.format("%q", dir .. entry.name), entry, dir
 end
 
 return M

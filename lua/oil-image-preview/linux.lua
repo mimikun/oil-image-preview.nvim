@@ -8,7 +8,7 @@ local debounce = util.debounce
 ---Open path with linux GNOME/sushi
 ---@param path string
 local function open_file_with_quicklook(path)
-    vim.cmd(("silent !xdg-open %s &"):format(path))
+    vim.cmd(("silent !xdg-open '%s' &"):format(path))
 end
 
 -- NOTE: ONLY linux
@@ -148,7 +148,26 @@ local is_wezterm_preview_open = function()
     return getPreviewWeztermPaneId() ~= nil
 end
 
--- NOTE: ONLY macos, linux
+local function preview_file_image_magick(path, preview_pane_id)
+    local temp_dir = vim.fn.tempname()
+    vim.fn.mkdir(temp_dir)
+
+    -- Convert only the first page of the PDF to a PNG image using convert
+    local cmd = ("magick -- \"%s[0]\" \"%s/preview.png\""):format(path, temp_dir)
+    vim.fn.system(cmd)
+
+    -- Preview the generated image in Wezterm
+    local image_path = temp_dir .. "/preview.png"
+    if vim.fn.filereadable(image_path) == 1 then
+        sendCommandToWeztermPane(preview_pane_id, ("wezterm imgcat %s"):format(image_path))
+    end
+
+    -- Cleanup
+    vim.defer_fn(function()
+        vim.fn.delete(temp_dir, "rf")
+    end, 1000)  -- 1000 ms de espera
+end
+
 M.weztermPreview = {
     callback = function()
         if is_wezterm_preview_open() then
@@ -157,7 +176,6 @@ M.weztermPreview = {
 
         local oil = require("oil")
         local oil_util = require("oil.util")
-        local perviw_entry_id = nil
         local prev_cmd = nil
 
         local neovim_wezterm_pane_id = getNeovimWeztermPane()
@@ -169,40 +187,57 @@ M.weztermPreview = {
                     return
                 end
                 local entry = oil.get_cursor_entry()
-                -- Don't update in visual mode. Visual mode implies editing not browsing,
-                -- and updating the preview can cause flicker and stutter.
                 if entry ~= nil and not oil_util.is_visual_mode() then
                     local preview_pane_id = openWeztermPreviewPane()
                     activeWeztermPane(neovim_wezterm_pane_id)
-
-                    if perviw_entry_id == entry.id then
-                        return
-                    end
 
                     if prev_cmd == "bat" then
                         sendCommandToWeztermPane(preview_pane_id, "q")
                         prev_cmd = nil
                     end
 
+                    if prev_cmd == "mpv" then
+                        sendCommandToWeztermPane(preview_pane_id, "q")
+                        prev_cmd = nil
+                    end
+
                     local path = assert(util.getEntryAbsolutePath())
+                    local _,path_f = assert(util.getEntryAbsolutePath())
                     local command = ""
                     if entry.type == "directory" then
+                        path = path_f
                         local cmd = "ls -l"
                         command = command .. ("%s %s"):format(cmd, path)
+                     elseif entry.type == "file" and util.isImageMagickCompatible(path) then
+                        preview_file_image_magick(path, preview_pane_id)
+                        prev_cmd = "convert"
                         prev_cmd = cmd
                     elseif entry.type == "file" and util.isImage(path) then
+                        path = path_f
                         local cmd = "wezterm imgcat"
                         command = command .. ("%s %s"):format(cmd, path)
                         prev_cmd = cmd
-                    elseif entry.type == "file" then
+                   elseif entry.type == "file" and util.isBatCompatible(path) then
+                        path = path_f
                         local cmd = "bat"
+                        command = command .. ("%s %s"):format(cmd, path)
+                        prev_cmd = cmd
+                    elseif entry.type == "file" and util.isMPVCompatible(path) then
+                        path = path_f
+                        local cmd = "mpv --vo=sixel --no-audio"
+                        command = command .. ("%s %s"):format(cmd, path)
+                        prev_cmd = "mpv"
+                    elseif entry.type == "file" then
+                        path = path_f
+                        local cmd = "file --mime-type -b"
                         command = command .. ("%s %s"):format(cmd, path)
                         prev_cmd = cmd
                     end
 
-                    sendCommandToWeztermPane(preview_pane_id, command)
-                    -- NOTE: unused?
-                    --local previw_entry_id = entry.id
+
+                    if prev_cmd ~= "pdftoppm" then
+                        sendCommandToWeztermPane(preview_pane_id, command)
+                    end
                 end
             end),
             50
@@ -235,3 +270,4 @@ M.weztermPreview = {
 }
 
 return M
+
