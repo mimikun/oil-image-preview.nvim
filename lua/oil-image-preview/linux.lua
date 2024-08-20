@@ -206,7 +206,7 @@ M.weztermPreview = {
                     local command = ""
                     if entry.type == "directory" then
                         path = path_f
-                        local cmd = "ls -l"
+                        local cmd = "eza --icons=always -l"
                         command = command .. ("%s %s"):format(cmd, path)
                      elseif entry.type == "file" and util.isImageMagickCompatible(path) then
                         preview_file_image_magick(path, preview_pane_id)
